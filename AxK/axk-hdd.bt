@@ -1,0 +1,42 @@
+
+struct FILE {
+    struct DEV3_CHUNK {
+        char yamaha_dev_header[11];
+        byte unknown_empty_1[117];
+        byte logical_physical_content[48]; // indicates whether the partition is logical or physical
+// logical:
+// 0080h: 00 01 00 00 00 32 00 00 00 00 01 55 1D 84 00 00  .....2.....U.„.. 
+// 0090h: 00 00 00 00 00 01 00 00 00 1D 00 00 00 00 02 00  ................ 
+// 00A0h: 00 00 08 00 00 00 00 00 00 00 00 03 00 00 07 FD  ...............ý 
+
+// physical: 
+// 0080h: A1 E0 01 52 A2 2C 00 00 00 22 00 17 09 10 00 00  ¡à.R¢,..."...... 
+// 0090h: 00 00 00 17 09 10 00 00 01 00 01 52 00 00 02 00  ...........R.... 
+// 00A0h: 00 00 08 00 00 00 00 00 00 00 00 03 00 00 07 FD  ...............ý 
+
+        byte unknown_empty_2[336];
+    } dev3_init_chunks[2]; // partition type chunks?  
+
+    struct DISK_CHUNK { // maybe a disk chunk?
+        byte content_1[8]; // possibly 9 bytes, looks important. like disk size, partition size, etc...
+        byte unknown_empty_1[1];
+        byte header[5]; // disk number? partition count?
+        byte content_2[12];
+        byte name[11];
+        byte content_3[7];
+        byte unknown_empty_2[468];
+    } disk_chunk;
+
+    struct PARTITION_CHUNK {
+        char yamaha_dev_header[11];
+        byte unknown_empty_1[53];
+        char name[16];
+        byte unknown_empty_2[51];
+        byte content_1[41];
+        byte unknown_empty_3[91];
+        byte content_2[236];
+        byte unknown_4[525];
+    } partition_chunk[2]; // first partition chunk is mostly empty in a4k-test-08.hds. This doesn't seem to be entirely correct yet.
+
+} axk_file;
+
