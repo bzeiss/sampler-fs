@@ -1,9 +1,15 @@
-
+// work in progress binary template for 010 editor
 struct FILE {
-    struct DEV3_CHUNK {
+    struct PARTITION_TYPE_CHUNK { // 512 byte block.
         char yamaha_dev_header[11];
         byte unknown_empty_1[117];
-        byte logical_physical_content[48]; // indicates whether the partition is logical or physical
+        byte unknown_content_1[21];
+        byte partition_count:4; // hypothesis, maybe wrong, but seems to work for disks with logical partitions for the two samples.
+        byte unknown_content_2:4;
+        byte unknown_content_3[22];
+
+// old:
+//        byte logical_physical_content[48]; // indicates whether the partition is logical or physical
 // logical:
 // 0080h: 00 01 00 00 00 32 00 00 00 00 01 55 1D 84 00 00  .....2.....U.„.. 
 // 0090h: 00 00 00 00 00 01 00 00 00 1D 00 00 00 00 02 00  ................ 
@@ -14,20 +20,42 @@ struct FILE {
 // 0090h: 00 00 00 17 09 10 00 00 01 00 01 52 00 00 02 00  ...........R.... 
 // 00A0h: 00 00 08 00 00 00 00 00 00 00 00 03 00 00 07 FD  ...............ý 
 
-        byte unknown_empty_2[336];
-    } dev3_init_chunks[2]; // partition type chunks?  
+        byte partition_1_data[8];
+        byte partition_2_data[8];
+        byte partition_3_data[8];
+        byte partition_4_data[8];
+        byte partition_5_data[8];
+        byte partition_6_data[8];
+        byte partition_7_data[8];
+        byte partition_8_data[8];
+        byte unknown_empty_2[276];
+    } partition_type_chunks; // partition type chunk?  
 
-    struct DISK_CHUNK { // maybe a disk chunk?
-        byte content_1[8]; // possibly 9 bytes, looks important. like disk size, partition size, etc...
-        byte unknown_empty_1[1];
+    struct PARTITION_TYPE_DISK_CHUNK { // 1024 byte block.
+        char yamaha_dev_header[11];
+        byte unknown_empty_1[117];
+        byte unknown_content_1[21];
+        byte partition_count:4; // hypothesis, maybe wrong, but seems to work for disks with logical partitions for the two samples.
+        byte unknown_content_2:4;
+        byte unknown_content_3[22];
+        byte partition_1_data[8];
+        byte partition_2_data[8];
+        byte partition_3_data[8];
+        byte partition_4_data[8];
+        byte partition_5_data[8];
+        byte partition_6_data[8];
+        byte partition_7_data[8];
+        byte partition_8_data[8];
+        byte unknown_empty_2[276];
+        byte content_1[8]; // possibly 9 bytes, looks important. like disk size, partition size, checksum, etc...
+        byte unknown_empty_3[1];
         byte header[5]; // disk number? partition count?
         byte content_2[12];
-        byte name[11];
-        byte content_3[7];
-        byte unknown_empty_2[468];
-    } disk_chunk;
+        byte name[16];
+        byte unknown_empty_4[470];
+    } partition_type_disk_chunks;  
 
-    struct PARTITION_CHUNK {
+    struct PARTITION_CHUNK { // 1024 byte block
         char yamaha_dev_header[11];
         byte unknown_empty_1[53];
         char name[16];
@@ -35,8 +63,20 @@ struct FILE {
         byte content_1[41];
         byte unknown_empty_3[91];
         byte content_2[236];
-        byte unknown_4[525];
-    } partition_chunk[2]; // first partition chunk is mostly empty in a4k-test-08.hds. This doesn't seem to be entirely correct yet.
+        byte unknown_empty_4[525];
+    } partition_chunks[2];
+
+    struct UNKNOWN_CHUNK_1 {
+        byte unknown_empty_1[45];
+        byte content_3[4];
+        byte unknown_empty_2[975];
+    } unknown_chunk_1[2];
+
+    struct UNKNOWN_CHUNK_2 {
+        byte unknown[1024]; // very likely wrong: a4k-test-04.hds is longer, dependant on number of volumes or dynamic?
+    } unknown_chunk_2;
+
+
 
 } axk_file;
 
