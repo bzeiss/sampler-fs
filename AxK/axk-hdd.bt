@@ -1,12 +1,12 @@
 // work in progress binary template for 010 editor
-struct FILE {
-    struct PARTITION_TYPE_CHUNK { // 512 byte block.
-        char yamaha_dev_header[11];
-        byte unknown_empty_1[117];
-        byte unknown_content_1[21];
-        byte partition_count:4; // hypothesis, maybe wrong, but seems to work for disks with logical partitions for the two samples.
-        byte unknown_content_2:4;
-        byte unknown_content_3[22];
+
+typedef struct PARTITION_TYPE_CHUNK { // 512 byte block.
+    char yamaha_dev_header[11];
+    byte unknown_empty_1[117];
+    byte partition_type[21]; // hypothesis. logical or physical.
+    byte partition_count:4; // hypothesis, maybe wrong, but seems to work for disks with logical partitions for the two samples.
+    byte unknown_content_2:4;
+    byte unknown_content_3[22];
 
 // old:
 //        byte logical_physical_content[48]; // indicates whether the partition is logical or physical
@@ -20,63 +20,104 @@ struct FILE {
 // 0090h: 00 00 00 17 09 10 00 00 01 00 01 52 00 00 02 00  ...........R.... 
 // 00A0h: 00 00 08 00 00 00 00 00 00 00 00 03 00 00 07 FD  ...............ý 
 
-        byte partition_1_data[8];
-        byte partition_2_data[8];
-        byte partition_3_data[8];
-        byte partition_4_data[8];
-        byte partition_5_data[8];
-        byte partition_6_data[8];
-        byte partition_7_data[8];
-        byte partition_8_data[8];
-        byte unknown_empty_2[276];
-    } partition_type_chunks; // partition type chunk?  
+    byte partition_1_data[8];
+    byte partition_2_data[8];
+    byte partition_3_data[8];
+    byte partition_4_data[8];
+    byte partition_5_data[8];
+    byte partition_6_data[8];
+    byte partition_7_data[8];
+    byte partition_8_data[8];
+    byte unknown_empty_2[276];
+}; // partition type chunk?  
 
-    struct PARTITION_TYPE_DISK_CHUNK { // 1024 byte block.
-        char yamaha_dev_header[11];
-        byte unknown_empty_1[117];
-        byte unknown_content_1[21];
-        byte partition_count:4; // hypothesis, maybe wrong, but seems to work for disks with logical partitions for the two samples.
-        byte unknown_content_2:4;
-        byte unknown_content_3[22];
-        byte partition_1_data[8];
-        byte partition_2_data[8];
-        byte partition_3_data[8];
-        byte partition_4_data[8];
-        byte partition_5_data[8];
-        byte partition_6_data[8];
-        byte partition_7_data[8];
-        byte partition_8_data[8];
-        byte unknown_empty_2[276];
-        byte content_1[8]; // possibly 9 bytes, looks important. like disk size, partition size, checksum, etc...
-        byte unknown_empty_3[1];
-        byte header[5]; // disk number? partition count?
-        byte content_2[12];
-        byte name[16];
-        byte unknown_empty_4[470];
-    } partition_type_disk_chunks;  
+typedef struct PARTITION_TYPE_DISK_CHUNK { // 1024 byte block.
+    char yamaha_dev_header[11];
+    byte unknown_empty_1[117];
+    byte partition_type[21]; // hypothesis. logical or physical.
+    byte partition_count:4; // hypothesis, maybe wrong, but seems to work for disks with logical partitions for the two samples.
+    byte unknown_content_2:4;
+    byte unknown_content_3[22];
+    byte partition_1_data[8];
+    byte partition_2_data[8];
+    byte partition_3_data[8];
+    byte partition_4_data[8];
+    byte partition_5_data[8];
+    byte partition_6_data[8];
+    byte partition_7_data[8];
+    byte partition_8_data[8];
+    byte unknown_empty_2[276];
+    byte content_1[8]; // possibly 9 bytes, looks important. like disk size, partition size, checksum, etc...
+    byte unknown_empty_3[1];
+    byte header[5]; // disk number? partition count?
+    byte content_2[12];
+    byte name[16];
+    byte unknown_empty_4[470];
+};  
 
-    struct PARTITION_CHUNK { // 1024 byte block
-        char yamaha_dev_header[11];
-        byte unknown_empty_1[53];
-        char name[16];
-        byte unknown_empty_2[51];
-        byte content_1[41];
-        byte unknown_empty_3[91];
-        byte content_2[236];
-        byte unknown_empty_4[525];
-    } partition_chunks[2];
+typedef struct PARTITION_CHUNK { // 1024 byte block
+    char yamaha_dev_header[11];
+    byte unknown_empty_1[53];
+    char partition_name[16];
+    byte unknown_empty_2[51];
+    byte content_1[41];
+    byte unknown_empty_3[91];
+    byte content_2[236];
+    byte unknown_empty_4[525];
+};
 
-    struct UNKNOWN_CHUNK_1 {
-        byte unknown_empty_1[45];
-        byte content_3[4];
-        byte unknown_empty_2[975];
-    } unknown_chunk_1[2];
+typedef struct UNKNOWN_CHUNK_1 {
+    byte unknown_empty_1[45];
+    byte content_3[4];
+    byte unknown_empty_2[975];
+};
 
-    struct UNKNOWN_CHUNK_2 {
-        byte unknown[1024]; // very likely wrong: a4k-test-04.hds is longer, dependant on number of volumes or dynamic?
-    } unknown_chunk_2;
+typedef struct UNKNOWN_CHUNK_2 {
+    byte unknown[1024]; // very likely wrong: a4k-test-04.hds is longer, dependant on number of volumes or dynamic?
+};
 
 
+// -----------------------------------------------------------------------------------------------------
 
-} axk_file;
+LittleEndian(); // assumption for now
 
+SetBackColor( cLtYellow );
+PARTITION_TYPE_CHUNK partition_type_chunk;
+
+SetBackColor( cLtGreen );
+PARTITION_TYPE_DISK_CHUNK partition_type_disk_chunk;
+
+SetBackColor( cLtPurple );
+PARTITION_CHUNK partition_chunk_1;
+
+SetBackColor( cLtBlue );
+PARTITION_CHUNK partition_chunk_2;
+
+SetBackColor( cLtGray );
+UNKNOWN_CHUNK_1 unknown_chunk_1_1;
+SetBackColor( cLtBlue );
+UNKNOWN_CHUNK_1 unknown_chunk_1_2;
+SetBackColor( cLtGray );
+UNKNOWN_CHUNK_2 directory_index; //?
+
+/*
+UNKNOWN_CHUNK_1 unknown_chunk_01;
+UNKNOWN_CHUNK_1 unknown_chunk_02;
+UNKNOWN_CHUNK_1 unknown_chunk_03;
+UNKNOWN_CHUNK_1 unknown_chunk_04;
+UNKNOWN_CHUNK_1 unknown_chunk_05;
+UNKNOWN_CHUNK_1 unknown_chunk_06;
+UNKNOWN_CHUNK_1 unknown_chunk_07;
+UNKNOWN_CHUNK_1 unknown_chunk_08;
+UNKNOWN_CHUNK_1 unknown_chunk_09;
+UNKNOWN_CHUNK_1 unknown_chunk_10;
+*/
+
+/*
+while( !FEof() ) {
+    SetBackColor( cLtGray );
+    UNKNOWN_CHUNK_2 unknown_chunk_2_1;
+    SetBackColor( cLtBlue );
+    UNKNOWN_CHUNK_2 unknown_chunk_2_2;
+}
+*/
