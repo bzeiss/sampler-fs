@@ -1,12 +1,15 @@
 // work in progress binary template for 010 editor
 
 typedef struct PARTITION_TYPE_CHUNK { // 512 byte block.
-    char yamaha_dev_header[11];
+    char yamaha_dev3_tag[11];
     byte unknown_empty_1[117];
     byte partition_type[21]; // hypothesis. logical or physical.
     byte partition_count:4; // hypothesis, maybe wrong, but seems to work for disks with logical partitions for the two samples.
     byte unknown_content_2:4;
-    byte unknown_content_3[22];
+    byte unknown_content_3[6];
+    uint32 sector_size; // in bytes, hypothesis
+    uint32 number_of_sectors; // hypothesis
+    byte unknown_content_5[8];
 
 // old:
 //        byte logical_physical_content[48]; // indicates whether the partition is logical or physical
@@ -20,32 +23,52 @@ typedef struct PARTITION_TYPE_CHUNK { // 512 byte block.
 // 0090h: 00 00 00 17 09 10 00 00 01 00 01 52 00 00 02 00  ...........R.... 
 // 00A0h: 00 00 08 00 00 00 00 00 00 00 00 03 00 00 07 FD  ...............ý 
 
-    byte partition_1_data[8];
-    byte partition_2_data[8];
-    byte partition_3_data[8];
-    byte partition_4_data[8];
-    byte partition_5_data[8];
-    byte partition_6_data[8];
-    byte partition_7_data[8];
-    byte partition_8_data[8];
+    uint32 partition_1_number_of_sectors;
+    byte partition_1_data[4];
+    uint32 partition_2_number_of_sectors;
+    byte partition_2_data[4];
+    uint32 partition_3_number_of_sectors;
+    byte partition_3_data[4];
+    uint32 partition_4_number_of_sectors;
+    byte partition_4_data[4];
+    uint32 partition_5_number_of_sectors;
+    byte partition_5_data[4];
+    uint32 partition_6_number_of_sectors;
+    byte partition_6_data[4];
+    uint32 partition_7_number_of_sectors;
+    byte partition_7_data[4];
+    uint32 partition_8_number_of_sectors;
+    byte partition_8_data[4];
     byte unknown_empty_2[276];
 }; // partition type chunk?  
 
 typedef struct PARTITION_TYPE_DISK_CHUNK { // 1024 byte block.
-    char yamaha_dev_header[11];
+    char yamaha_dev3_tag[11];
     byte unknown_empty_1[117];
     byte partition_type[21]; // hypothesis. logical or physical.
     byte partition_count:4; // hypothesis, maybe wrong, but seems to work for disks with logical partitions for the two samples.
     byte unknown_content_2:4;
-    byte unknown_content_3[22];
-    byte partition_1_data[8];
-    byte partition_2_data[8];
-    byte partition_3_data[8];
-    byte partition_4_data[8];
-    byte partition_5_data[8];
-    byte partition_6_data[8];
-    byte partition_7_data[8];
-    byte partition_8_data[8];
+    //byte unknown_content_3[22];
+    byte unknown_content_3[6];
+    uint32 sector_size; // in bytes, hypothesis
+    uint32 number_of_sectors; // hypothesis
+    byte unknown_content_5[8];
+    uint32 partition_1_number_of_sectors;
+    byte partition_1_data[4];
+    uint32 partition_2_number_of_sectors;
+    byte partition_2_data[4];
+    uint32 partition_3_number_of_sectors;
+    byte partition_3_data[4];
+    uint32 partition_4_number_of_sectors;
+    byte partition_4_data[4];
+    uint32 partition_5_number_of_sectors;
+    byte partition_5_data[4];
+    uint32 partition_6_number_of_sectors;
+    byte partition_6_data[4];
+    uint32 partition_7_number_of_sectors;
+    byte partition_7_data[4];
+    uint32 partition_8_number_of_sectors;
+    byte partition_8_data[4];
     byte unknown_empty_2[276];
     byte content_1[8]; // possibly 9 bytes, looks important. like disk size, partition size, checksum, etc...
     byte unknown_empty_3[1];
@@ -56,7 +79,7 @@ typedef struct PARTITION_TYPE_DISK_CHUNK { // 1024 byte block.
 };  
 
 typedef struct PARTITION_CHUNK { // 1024 byte block
-    char yamaha_dev_header[11];
+    char yamaha_dev3_tag[11];
     byte unknown_empty_1[53];
     char partition_name[16];
     byte unknown_empty_2[51];
@@ -79,7 +102,7 @@ typedef struct UNKNOWN_CHUNK_2 {
 
 // -----------------------------------------------------------------------------------------------------
 
-LittleEndian(); // assumption for now
+BigEndian(); // assumption for now
 
 SetBackColor( cLtYellow );
 PARTITION_TYPE_CHUNK partition_type_chunk;
