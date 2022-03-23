@@ -1,15 +1,9 @@
 // work in progress binary template for 010 editor
 
-typedef struct PARTITION_TYPE_CHUNK { // 512 byte block.
+typedef struct SFS_SUPERBLOCK { // 512 byte block
     char yamaha_dev3_tag[11];
     byte unknown_empty_1[117];
-    byte partition_type[21]; // hypothesis. logical or physical.
-    byte partition_count:4; // hypothesis, maybe wrong, but seems to work for disks with logical partitions for the two samples.
-    byte unknown_content_2:4;
-    byte unknown_content_3[6];
-    uint32 sector_size; // in bytes, hypothesis
-    uint32 number_of_sectors; // hypothesis
-    byte unknown_content_5[8];
+    byte partition_type[28]; // hypothesis. logical or physical.
 
 // old:
 //        byte logical_physical_content[48]; // indicates whether the partition is logical or physical
@@ -23,70 +17,48 @@ typedef struct PARTITION_TYPE_CHUNK { // 512 byte block.
 // 0090h: 00 00 00 17 09 10 00 00 01 00 01 52 00 00 02 00  ...........R.... 
 // 00A0h: 00 00 08 00 00 00 00 00 00 00 00 03 00 00 07 FD  ...............ý 
 
+    uint32 sector_size_bytes;
+    uint32 total_number_of_sectors;
+    byte unknown_content_5[4];
+
+    uint32 partition_1_start_sector;
     uint32 partition_1_number_of_sectors;
-    byte partition_1_data[4];
+    uint32 partition_2_start_sector;
     uint32 partition_2_number_of_sectors;
-    byte partition_2_data[4];
+    uint32 partition_3_start_sector;
     uint32 partition_3_number_of_sectors;
-    byte partition_3_data[4];
+    uint32 partition_4_start_sector;
     uint32 partition_4_number_of_sectors;
-    byte partition_4_data[4];
+    uint32 partition_5_start_sector;
     uint32 partition_5_number_of_sectors;
-    byte partition_5_data[4];
+    uint32 partition_6_start_sector;
     uint32 partition_6_number_of_sectors;
-    byte partition_6_data[4];
+    uint32 partition_7_start_sector;
     uint32 partition_7_number_of_sectors;
-    byte partition_7_data[4];
+    uint32 partition_8_start_sector;
     uint32 partition_8_number_of_sectors;
-    byte partition_8_data[4];
-    byte unknown_empty_2[276];
+    byte unknown_empty_2[280];
 }; // partition type chunk?  
 
-typedef struct PARTITION_TYPE_DISK_CHUNK { // 1024 byte block.
-    char yamaha_dev3_tag[11];
-    byte unknown_empty_1[117];
-    byte partition_type[21]; // hypothesis. logical or physical.
-    byte partition_count:4; // hypothesis, maybe wrong, but seems to work for disks with logical partitions for the two samples.
-    byte unknown_content_2:4;
-    //byte unknown_content_3[22];
-    byte unknown_content_3[6];
-    uint32 sector_size; // in bytes, hypothesis
-    uint32 number_of_sectors; // hypothesis
-    byte unknown_content_5[8];
-    uint32 partition_1_number_of_sectors;
-    byte partition_1_data[4];
-    uint32 partition_2_number_of_sectors;
-    byte partition_2_data[4];
-    uint32 partition_3_number_of_sectors;
-    byte partition_3_data[4];
-    uint32 partition_4_number_of_sectors;
-    byte partition_4_data[4];
-    uint32 partition_5_number_of_sectors;
-    byte partition_5_data[4];
-    uint32 partition_6_number_of_sectors;
-    byte partition_6_data[4];
-    uint32 partition_7_number_of_sectors;
-    byte partition_7_data[4];
-    uint32 partition_8_number_of_sectors;
-    byte partition_8_data[4];
-    byte unknown_empty_2[276];
+typedef struct DISC_METADATA_SECTOR { // 512 byte block
     byte content_1[8]; // possibly 9 bytes, looks important. like disk size, partition size, checksum, etc...
     byte unknown_empty_3[1];
     byte header[5]; // disk number? partition count?
     byte content_2[12];
     byte name[16];
     byte unknown_empty_4[470];
-};  
+};
 
 typedef struct PARTITION_CHUNK { // 1024 byte block
     char yamaha_dev3_tag[11];
     byte unknown_empty_1[53];
     char partition_name[16];
-    byte unknown_empty_2[51];
-    byte content_1[41];
-    byte unknown_empty_3[91];
-    byte content_2[236];
-    byte unknown_empty_4[525];
+    byte unknown_empty_2[48];
+    byte content_1[44];
+    byte unknown_empty_3[88];
+    byte content_2[239];
+    byte unknown_empty_4[13];
+    byte unknown_empty_5[525];
 };
 
 typedef struct UNKNOWN_CHUNK_1 {
@@ -99,48 +71,51 @@ typedef struct UNKNOWN_CHUNK_2 {
     byte unknown[1024]; // very likely wrong: a4k-test-04.hds is longer, dependant on number of volumes or dynamic?
 };
 
+/*
+typedef struct SAMPLE {
+    byte header[16]; // FSFSDEV3SPLXSMPL
+    uint32 sector_size;
+    uint32 unknown_1; // 3?
+    uint32 unknown_2; // 124?
+    uint32 sample_length_1; // left?
+    uint32 sample_length_2; // right?
+    byte unknown_3[14];
+    byte sample_name_internal[16];
+};
 
+typedef struct SAMPLEBANK {
+    byte header[16]; // FSFSDEV3SPLXSBNK
+    byte unknown_1[34];
+    byte sample_bank_name[16];
+
+};
+*/
 // -----------------------------------------------------------------------------------------------------
 
-BigEndian(); // assumption for now
+BigEndian();
 
 SetBackColor( cLtYellow );
-PARTITION_TYPE_CHUNK partition_type_chunk;
+SFS_SUPERBLOCK sfs_superblock;
 
 SetBackColor( cLtGreen );
-PARTITION_TYPE_DISK_CHUNK partition_type_disk_chunk;
+SFS_SUPERBLOCK sfs_superblock_backup;
+
+SetBackColor( cLtYellow );
+DISC_METADATA_SECTOR disc_metadata_sector;
 
 SetBackColor( cLtPurple );
-PARTITION_CHUNK partition_chunk_1;
+PARTITION_CHUNK partition_index;
 
 SetBackColor( cLtBlue );
-PARTITION_CHUNK partition_chunk_2;
+PARTITION_CHUNK partition_index_backup;
+
 
 SetBackColor( cLtGray );
 UNKNOWN_CHUNK_1 unknown_chunk_1_1;
 SetBackColor( cLtBlue );
 UNKNOWN_CHUNK_1 unknown_chunk_1_2;
 SetBackColor( cLtGray );
-UNKNOWN_CHUNK_2 directory_index; //?
+UNKNOWN_CHUNK_2 directory_index; 
 
-/*
-UNKNOWN_CHUNK_1 unknown_chunk_01;
-UNKNOWN_CHUNK_1 unknown_chunk_02;
-UNKNOWN_CHUNK_1 unknown_chunk_03;
-UNKNOWN_CHUNK_1 unknown_chunk_04;
-UNKNOWN_CHUNK_1 unknown_chunk_05;
-UNKNOWN_CHUNK_1 unknown_chunk_06;
-UNKNOWN_CHUNK_1 unknown_chunk_07;
-UNKNOWN_CHUNK_1 unknown_chunk_08;
-UNKNOWN_CHUNK_1 unknown_chunk_09;
-UNKNOWN_CHUNK_1 unknown_chunk_10;
-*/
 
-/*
-while( !FEof() ) {
-    SetBackColor( cLtGray );
-    UNKNOWN_CHUNK_2 unknown_chunk_2_1;
-    SetBackColor( cLtBlue );
-    UNKNOWN_CHUNK_2 unknown_chunk_2_2;
-}
-*/
+
