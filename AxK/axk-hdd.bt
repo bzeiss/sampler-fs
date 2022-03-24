@@ -48,10 +48,12 @@ typedef struct PARTITION { // 1024 byte block
     byte content_1[16];
     uint32 number_of_clusters; // hypothesis
     uint32 unknown_content_3; // number of sectors per cluster?
-    uint32 unknown_content_4; // number of sectors per cluster?
-    uint32 unknown_content_5; // cluster partition offset?
-    byte content_3[12];    
-    byte unknown_content_6[340];
+    uint32 unknown_content_4; // number of clusters for partition clusters?
+    uint32 unknown_content_5; // cluster bitmap cluster size + number of clusters for partition clusters? dynamic.
+    uint32 unknown_content_6; // ???? too big for either clusters or sectors. maybe some magic value. static.
+    uint32 unknown_content_7; // directory map size? dynamic.
+    uint32 unknown_content_8; // some kind of cluster offset? static
+    byte unknown_content_9[340];
     byte unknown_empty_5[512];
 };
 
@@ -92,6 +94,7 @@ typedef struct SAMPLEBANK {
 
 };
 */
+
 // -----------------------------------------------------------------------------------------------------
 
 BigEndian();
@@ -131,11 +134,20 @@ for (i=0; i < 8; i++) {
     PARTITION partition_backup;
     sectorCount+=2;
 
-    bitmap_size = partition.number_of_clusters;
-    bitmap_size = Abs((bitmap_size / 8.0)+0.5);
-    bitmap_size = Ceil(bitmap_size/1024.0);
+// calculated cluster bitmap size
+//    bitmap_size = partition.number_of_clusters;
+//    bitmap_size = Abs((bitmap_size / 8.0)+0.5);
+//    bitmap_size = Ceil(bitmap_size/1024.0);
+//    CLUSTER_BITMAP used_clusters(bitmap_size*1024);
+//    sectorCount+=bitmap_size*2;
+//    CLUSTER_BITMAP used_clusters_backup(bitmap_size*1024);
+//    sectorCount+=bitmap_size*2;
 
-    CLUSTER_BITMAP used_clusters(bitmap_size*1024);
+
+// direct cluster bitmap size
+    bitmap_size = partition.unknown_content_5-partition.unknown_content_4;
+
+    CLUSTER_BITMAP used_clusters(bitmap_size*2*512);
     sectorCount+=bitmap_size*2;
     CLUSTER_BITMAP used_clusters_backup(bitmap_size*1024);
     sectorCount+=bitmap_size*2;
