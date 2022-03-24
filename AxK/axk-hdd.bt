@@ -1,5 +1,10 @@
 // work in progress binary template for 010 editor
 
+typedef struct PARTITION_INFO {
+    uint32 start_sector;
+    uint32 number_of_sectors;
+};
+
 typedef struct SFS_SUPERBLOCK { // 512 byte block
     char yamaha_dev3_tag[11];
     byte unknown_empty_1[117];
@@ -21,24 +26,10 @@ typedef struct SFS_SUPERBLOCK { // 512 byte block
     uint32 total_number_of_sectors;
     byte unknown_content_5[4];
 
-    uint32 partition_1_start_sector;
-    uint32 partition_1_number_of_sectors;
-    uint32 partition_2_start_sector;
-    uint32 partition_2_number_of_sectors;
-    uint32 partition_3_start_sector;
-    uint32 partition_3_number_of_sectors;
-    uint32 partition_4_start_sector;
-    uint32 partition_4_number_of_sectors;
-    uint32 partition_5_start_sector;
-    uint32 partition_5_number_of_sectors;
-    uint32 partition_6_start_sector;
-    uint32 partition_6_number_of_sectors;
-    uint32 partition_7_start_sector;
-    uint32 partition_7_number_of_sectors;
-    uint32 partition_8_start_sector;
-    uint32 partition_8_number_of_sectors;
+    PARTITION_INFO partition_info[8];
+
     byte unknown_empty_2[280];
-}; // partition type chunk?  
+};
 
 typedef struct DISC_METADATA_SECTOR { // 512 byte block
     byte content_1[8]; // possibly 9 bytes, looks important. like disk size, partition size, checksum, etc...
@@ -49,16 +40,19 @@ typedef struct DISC_METADATA_SECTOR { // 512 byte block
     byte unknown_empty_4[470];
 };
 
-typedef struct PARTITION_CHUNK { // 1024 byte block
+typedef struct PARTITION { // 1024 byte block
     char yamaha_dev3_tag[11];
     byte unknown_empty_1[53];
     char partition_name[16];
     byte unknown_empty_2[48];
-    byte content_1[44];
-    byte unknown_empty_3[88];
-    byte content_2[239];
-    byte unknown_empty_4[13];
-    byte unknown_empty_5[525];
+    byte content_1[16];
+    uint32 number_of_clusters; // hypothesis
+    uint32 unknown_content_3; // number of sectors per cluster?
+    uint32 unknown_content_4; // number of sectors per cluster?
+    uint32 unknown_content_5; // cluster partition offset?
+    byte content_3[12];    
+    byte unknown_content_6[340];
+    byte unknown_empty_5[512];
 };
 
 typedef struct UNKNOWN_CHUNK_1 {
@@ -67,8 +61,16 @@ typedef struct UNKNOWN_CHUNK_1 {
     byte unknown_empty_2[975];
 };
 
+typedef struct CLUSTER_BITMAP(uint32 bitmap_size) {
+    byte used_clusters_bitmap[bitmap_size];
+};
+
 typedef struct UNKNOWN_CHUNK_2 {
     byte unknown[1024]; // very likely wrong: a4k-test-04.hds is longer, dependant on number of volumes or dynamic?
+};
+
+typedef struct DYNAMIC_UNKNOWN(uint32 size) {
+    byte unknown[size];
 };
 
 /*
@@ -94,28 +96,48 @@ typedef struct SAMPLEBANK {
 
 BigEndian();
 
+local int sectorCount;
+sectorCount = 0;
+
 SetBackColor( cLtYellow );
 SFS_SUPERBLOCK sfs_superblock;
+sectorCount++;
 
 SetBackColor( cLtGreen );
 SFS_SUPERBLOCK sfs_superblock_backup;
+sectorCount++;
 
 SetBackColor( cLtYellow );
 DISC_METADATA_SECTOR disc_metadata_sector;
+sectorCount++;
 
-SetBackColor( cLtPurple );
-PARTITION_CHUNK partition_index;
+local int i;
+local uint32 start_sector;
+local uint32 bytes_to_skip;
+local uint32 bitmap_size;
+bitmap_size = 0;
+for (i=0; i < 8; i++) {
+    if (sfs_superblock.partition_info[i].number_of_sectors <= 0)
+        continue;
+    start_sector = sfs_superblock.partition_info[i].start_sector;
+    bytes_to_skip = start_sector*512-(sectorCount*512);
+    if (bytes_to_skip > 0) {
+        DYNAMIC_UNKNOWN unknown_chunk(bytes_to_skip);
+        sectorCount+=start_sector-sectorCount;
+    }
+    SetBackColor( cLtPurple );
+    PARTITION partition;
+    sectorCount+=2;
+    PARTITION partition_backup;
+    sectorCount+=2;
 
-SetBackColor( cLtBlue );
-PARTITION_CHUNK partition_index_backup;
+    bitmap_size = partition.number_of_clusters;
+    bitmap_size = Abs((bitmap_size / 8.0)+0.5);
+    bitmap_size = Ceil(bitmap_size/1024.0);
 
-
-SetBackColor( cLtGray );
-UNKNOWN_CHUNK_1 unknown_chunk_1_1;
-SetBackColor( cLtBlue );
-UNKNOWN_CHUNK_1 unknown_chunk_1_2;
-SetBackColor( cLtGray );
-UNKNOWN_CHUNK_2 directory_index; 
-
-
+    CLUSTER_BITMAP used_clusters(bitmap_size*1024);
+    sectorCount+=bitmap_size*2;
+    CLUSTER_BITMAP used_clusters_backup(bitmap_size*1024);
+    sectorCount+=bitmap_size*2;
+}
 
