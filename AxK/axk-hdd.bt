@@ -67,6 +67,25 @@ typedef struct CLUSTER_BITMAP(uint32 bitmap_size) {
     byte used_clusters_bitmap[bitmap_size];
 };
 
+typedef struct NODE(uint32 partition_sector_start) { // 72 bytes
+    byte unknown_1[8];
+    uint16 node_type;
+    uint32 cluster_offset;
+    local uint32 sector_offset = cluster_offset*2;
+    if (cluster_offset > 0)
+        local uint32 absolute_sector = sector_offset + partition_sector_start;
+    else
+        local uint32 absolute_sector = 0;
+    byte unknown_2[44];
+    byte unknown_3[10]; // metadata?
+    byte unknown_4[4];
+};
+
+typedef struct DIRECTORY_INDEX(uint32 partition_sector_start) { // currently hardcoded to 1024 bytes. Must be dynamic.
+    NODE node(partition_sector_start)[11] <optimize=false>; // the first three nodes seem to be predefined
+    byte sector_filler[232];
+};
+
 typedef struct UNKNOWN_CHUNK_2 {
     byte unknown[1024]; // very likely wrong: a4k-test-04.hds is longer, dependant on number of volumes or dynamic?
 };
@@ -151,5 +170,9 @@ for (i=0; i < 8; i++) {
     sectorCount+=bitmap_size*2;
     CLUSTER_BITMAP used_clusters_backup(bitmap_size*1024);
     sectorCount+=bitmap_size*2;
+
+    DIRECTORY_INDEX directory_index(sfs_superblock.partition_info[i].start_sector);
+    sectorCount+=2;
+
 }
 
