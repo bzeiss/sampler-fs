@@ -40,19 +40,21 @@ typedef struct DISC_METADATA_SECTOR { // 512 byte block
     byte unknown_empty_4[470];
 };
 
-typedef struct PARTITION { // 1024 byte block
+typedef struct PARTITION(uint32 partition_sector_start) { // 1024 byte block
     char yamaha_dev3_tag[11];
     byte unknown_empty_1[53];
     char partition_name[16];
     byte unknown_empty_2[48];
     byte content_1[16];
     uint32 number_of_clusters; // hypothesis
-    uint32 unknown_content_3; // number of sectors per cluster?
-    uint32 unknown_content_4; // number of clusters for partition clusters?
-    uint32 unknown_content_5; // cluster bitmap cluster size + number of clusters for partition clusters? dynamic.
-    uint32 unknown_content_6; // ???? too big for either clusters or sectors. maybe some magic value. static.
-    uint32 unknown_content_7; // directory map size? dynamic.
-    uint32 unknown_content_8; // some kind of cluster offset? static
+    uint32 unknown_content_3 <comment="static">; // number of sectors per cluster?
+    uint32 unknown_content_4 <comment="static">; // number of clusters for partition clusters?
+    uint32 cluster_offset_to_cluster_bitmap;
+    local uint32 absolute_sector_cluster_bitmap = partition_sector_start + cluster_offset_to_cluster_bitmap*2;
+    uint32 unknown_content_6 <comment="static">; // ???? too big for either clusters or sectors. maybe some magic value. static.
+    uint32 cluster_offset_to_directory_index;
+    local uint32 absolute_sector_directory_index = partition_sector_start + cluster_offset_to_directory_index*2;
+    uint32 unknown_content_8 <comment="static">; // some kind of cluster offset? static
     byte unknown_content_9[88];
     uint32 unknown_content_10a;
     uint32 unknown_content_10b <comment="partition start sector sometimes?">; // the following bytes seem to be shifted sometimes. Hence, this stuff doesn't always match the hypotheses in the comments.
@@ -155,7 +157,7 @@ SFS_SUPERBLOCK sfs_superblock;
 sectorCount++;
 
 SetBackColor( cLtGreen );
-SFS_SUPERBLOCK sfs_superblock_backup;
+SFS_SUPERBLOCK sfs_superblock_backup <hidden=true>;
 sectorCount++;
 
 SetBackColor( cLtYellow );
@@ -173,13 +175,13 @@ for (i=0; i < 8; i++) {
     start_sector = sfs_superblock.partition_info[i].start_sector;
     bytes_to_skip = start_sector*512-(sectorCount*512);
     if (bytes_to_skip > 0) {
-        DYNAMIC_UNKNOWN unknown_chunk(bytes_to_skip);
+        DYNAMIC_UNKNOWN unknown_chunk(bytes_to_skip) <hidden=true>;
         sectorCount+=start_sector-sectorCount;
     }
     SetBackColor( cLtPurple );
-    PARTITION partition;
+    PARTITION partition(sfs_superblock.partition_info[i].start_sector);
     sectorCount+=2;
-    PARTITION partition_backup;
+    PARTITION partition_backup(sfs_superblock.partition_info[i].start_sector) <hidden=true>;
     sectorCount+=2;
 
 // calculated cluster bitmap size
@@ -193,15 +195,14 @@ for (i=0; i < 8; i++) {
 
 
 // direct cluster bitmap size
-    bitmap_size = partition.unknown_content_5-partition.unknown_content_4;
+    bitmap_size = partition.cluster_offset_to_directory_index - partition.cluster_offset_to_cluster_bitmap;
 
     CLUSTER_BITMAP used_clusters(bitmap_size*2*512);
     sectorCount+=bitmap_size*2;
-    CLUSTER_BITMAP used_clusters_backup(bitmap_size*1024);
+    CLUSTER_BITMAP used_clusters_backup(bitmap_size*1024) <hidden=true>;
     sectorCount+=bitmap_size*2;
 
     DIRECTORY_INDEX directory_index(sfs_superblock.partition_info[i].start_sector);
     sectorCount+=2;
-
 }
 
