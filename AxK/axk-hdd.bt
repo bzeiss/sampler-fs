@@ -24,14 +24,14 @@ typedef struct SFS_SUPERBLOCK { // 512 byte block
 
     uint32 sector_size_bytes;
     uint32 total_number_of_sectors;
-    byte unknown_content_5[4];
+    byte unknown_empty_2[4];
 
     PARTITION_INFO partition_info[8];
 
-    byte unknown_empty_2[280];
+    byte unknown_empty_3[280];
 };
 
-typedef struct DISC_METADATA_SECTOR { // 512 byte block
+typedef struct DISC_METADATA_SECTOR { // 512 byte block, not sure yet what this sector is doing exactly...
     byte content_1[8]; // possibly 9 bytes, looks important. like disk size, partition size, checksum, etc...
     byte unknown_empty_3[1];
     byte header[5]; // disk number? partition count?
@@ -45,7 +45,9 @@ typedef struct PARTITION(uint32 partition_sector_start) { // 1024 byte block
     byte unknown_empty_1[53];
     char partition_name[16];
     byte unknown_empty_2[48];
-    byte content_1[16];
+    uint32 content_1 <comment="static">;
+    uint32 content_2 <comment="static">;
+    byte content_3[8];
     uint32 number_of_clusters; // hypothesis
     uint32 unknown_content_3 <comment="static">; // number of sectors per cluster?
     uint32 unknown_content_4 <comment="static">; // number of clusters for partition clusters?
@@ -80,20 +82,20 @@ typedef struct CLUSTER_BITMAP(uint32 bitmap_size) {
 };
 
 enum <uint16> NODE_TYPE {
-    INITIAL = 128,
-    VOLUMES_INDEX = 160,
-    EMPTY = 0,
-    SMP = 96,
-    UNKNOWN_REPEATING_NODE_1 = 64,
-    UNKNOWN_SMPL_SBNK_SBAC_SEQU_PROG_NODE = 224,
-    SMPX = 23176,
-    SBNK = 394
+    NT_INITIAL = 128,
+    NT_VOLUMES_INDEX = 160,
+    NT_EMPTY = 0,
+    NT_SMP = 96,
+    NT_UNKNOWN_REPEATING_NODE_1 = 64,
+    NT_UNKNOWN_SMPL_SBNK_SBAC_SEQU_PROG_NODE = 224,
+    NT_SMPL = 23176,
+    NT_SBNK = 392
 };
 
 
 typedef struct NODE(uint32 partition_sector_start) { // 72 bytes
-    uint16 unknown_1;
-    uint32 unknown_2a;
+    uint16 unknown_1 <comment="usually 1 except for SMPL. SMPL=2. Indicator for oversized data?">;
+    uint32 unknown_2a <comment="usually 2 except for SMPL. SMPL=87. Indicator for oversized data?">;
     uint16 unknown_2b;
     NODE_TYPE node_type;
     uint32 cluster_offset;
@@ -102,8 +104,8 @@ typedef struct NODE(uint32 partition_sector_start) { // 72 bytes
         local uint32 absolute_sector = sector_offset + partition_sector_start;
     else
         local uint32 absolute_sector = 0;
-    uint32 unknown_2;
-    uint32 unknown_3;
+    uint32 unknown_2 <comment="usually 2. For the first node node_type=128, it is 1.">;
+    uint32 data_size <comment="bytes, 2048 indicator for large dataset? (SMPL)">;
     byte unknown_4[36];
     byte unknown_5[9]; // metadata?
     byte unknown_6;
@@ -125,25 +127,110 @@ typedef struct DYNAMIC_UNKNOWN(uint32 size) {
     byte unknown[size];
 };
 
-/*
-typedef struct SAMPLE {
-    byte header[16]; // FSFSDEV3SPLXSMPL
-    uint32 sector_size;
-    uint32 unknown_1; // 3?
-    uint32 unknown_2; // 124?
-    uint32 sample_length_1; // left?
-    uint32 sample_length_2; // right?
-    byte unknown_3[14];
-    byte sample_name_internal[16];
+enum <byte> AXK_OBJECT_TYPE {
+    OT_SAMPLE = 16,
+    OT_SAMPLE_BANK = 17,
+    OT_SEQUENCE = 19,
+    OT_PROGRAM = 20
 };
 
-typedef struct SAMPLEBANK {
-    byte header[16]; // FSFSDEV3SPLXSBNK
-    byte unknown_1[34];
-    byte sample_bank_name[16];
-
+typedef struct AXK_SAMPLE_PARAMETER { // 224 bytes (a bit less currently)
+    ubyte reserved_1[24];
+    uint32 bitmap_link_to_program_a;
+    uint32 bitmap_link_to_program_b;
+    uint32 bitmap_link_to_program_c;
+    uint32 bitmap_link_to_program_d;
+    ubyte bitmap_1;
+    ubyte bitmap_2;
+    ubyte midi_receive_channel;
+    ubyte pitchbend_type;
+    ubyte pitchbend_range;
+    byte coarse_tune;
+    ubyte original_key_left;
+    ubyte original_key_right;
+    uint16 sampling_frequency_left; 
+    uint16 sampling_frequency_right;
+    byte finetune_left;
+    byte finetune_right;
+    int16 reserved_2[2];
+    ubyte keyrange_high;
+    byte keyrange_low;
+    ubyte reserved_3;
+    ubyte loop_mode;
+    uint16 loop_tempo;
+    uint32 wave_start_address_left;
+    uint32 wave_start_address_right;
+    uint32 wave_length_left;
+    uint32 wave_length_right;
+    byte start_address_velocity_sensitivity;
+    ubyte filter_type;
+    ubyte filter_cutoff_frequency;
+    ubyte filter_q;
+    ubyte cutoff_key_scaling_breakpoint_1;
+    ubyte cutoff_key_scaling_breakpoint_2;
+    byte cutoff_scaling_level_1;
+    byte cutoff_scaling_level_2;
+    byte cutoff_velocity_sensititvity;
+    byte q_velocity_sensitivity;
+    byte detune;
+    byte dephase;
+    byte expand_width;
+    ubyte random_pitch;
+    ubyte sample_level;
+    byte pan;
+    ubyte velocity_low_limit;
+    ubyte veloity_offset;
+    //...
+     
 };
-*/
+
+typedef struct SFS_DATA_BLOCK_METADATA {
+    byte header[16];
+    uint32 unknown_1;
+    uint32 unknown_2 <comment="some cluster offset">;
+    uint32 unknown_3 <comment="some cluster offset">;
+};
+
+typedef struct AXK_SAMPLEBANK_MEMBER {
+    byte assigned_sample_name[16];
+    uint32 reserved;
+};
+
+typedef struct AXK_COMMON { // 64 byte
+    AXK_OBJECT_TYPE object_type;
+    ubyte reserved_1;
+    byte name[16];
+    ubyte reserved_2[2];
+    uint32 size;
+    ubyte reserved_3[16];
+    ubyte reserved_4[16];
+    ubyte reserved_5;
+    ubyte reserved_6[3];
+    uint32 reserved_7;
+};
+
+typedef struct AXK_SAMPLE { // FSFSDEV3SPLXSMPL, work in progress. Does not match the sysex block for some reason
+    SFS_DATA_BLOCK_METADATA metadata;
+//    AXK_COMMON common; // doesn't work!
+
+    uint32 size_left;
+    uint32 size_right;
+    uint32 unknown_3;
+    uint16 samplerate;
+    uint16 unknown_4 <comment="num channels?">;
+    uint32 unknown_4;
+    byte unknown_5;
+    byte unknown_6;
+    byte linked_wave_object_name[16];
+};
+
+typedef struct AXK_SAMPLEBANK { // FSFSDEV3SPLXSBNK, roughly works, incomplete and untested.
+    SFS_DATA_BLOCK_METADATA metadata;
+    ubyte unknown_1[20];
+    AXK_COMMON common;
+    ubyte unknown_2[8];
+    AXK_SAMPLE_PARAMETER sample_parameter;
+};
 
 // -----------------------------------------------------------------------------------------------------
 
@@ -204,5 +291,40 @@ for (i=0; i < 8; i++) {
 
     DIRECTORY_INDEX directory_index(sfs_superblock.partition_info[i].start_sector);
     sectorCount+=2;
+
+    // try to parse the data blocks
+    local int currentPos <hidden=true> = FTell();
+
+    local int j <hidden=true>;
+    local uint32 data_sector <hidden=true>;
+    for (j=0; j < 11; j++) {
+        if (directory_index.node[j].data_size > 0) {
+            data_sector = directory_index.node[j].absolute_sector;
+            
+            FSeek(data_sector*512);
+            
+            if (directory_index.node[j].node_type == NT_SBNK) {
+                AXK_SAMPLEBANK samplebank;
+                continue;
+            } 
+            if ((directory_index.node[j].node_type == NT_SMPL))  {
+                AXK_SAMPLE sample;
+                continue;
+            }
+
+/*
+            if (directory_index.node[j].node_type == NT_SMPL) {
+                AXK_WAVE_DATA wavedata;
+                continue;
+            } 
+*/
+/*else { // generic parsing to unknown data structure
+                local DYNAMIC_UNKNOWN node_data(directory_index.node[j].data_size);
+                ReadBytes(node_data.unknown, data_sector*512, directory_index.node[j].data_size);
+            }*/
+        }
+    }    
+
+    FSeek(currentPos);
 }
 
