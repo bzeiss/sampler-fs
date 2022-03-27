@@ -82,7 +82,7 @@ typedef struct CLUSTER_BITMAP(uint32 bitmap_size) {
 };
 
 enum <uint16> NODE_TYPE {
-    NT_INITIAL = 128,
+    NT_INITIAL = 128, // not really INITAL, depending on the image, 128 may appear multiple times in the dir index
     NT_VOLUMES_INDEX = 160,
     NT_EMPTY = 0,
     NT_SMP = 96,
@@ -202,8 +202,15 @@ typedef struct AXK_COMMON { // 64 byte
     byte name[16];
     ubyte reserved_2[2];
     uint32 size;
-    ubyte reserved_3[16];
-    ubyte reserved_4[16];
+
+    ubyte reserved_3[12];
+    byte volume[16];
+    ubyte reserved_4[4];
+
+//    ubyte reserved_3[16];
+//    ubyte reserved_4[16];
+
+
     ubyte reserved_5;
     ubyte reserved_6[3];
     uint32 reserved_7;
@@ -225,10 +232,37 @@ typedef struct AXK_SAMPLE { // FSFSDEV3SPLXSMPL, work in progress. Does not matc
 };
 
 typedef struct AXK_SAMPLEBANK { // FSFSDEV3SPLXSBNK, roughly works, incomplete and untested.
-    SFS_DATA_BLOCK_METADATA metadata;
-    ubyte unknown_1[20];
-    AXK_COMMON common;
-    ubyte unknown_2[8];
+    byte header[16];
+    uint32 unknown_1;
+    uint32 unknown_2 <comment="some cluster offset?">;
+    uint32 unknown_3 <comment="some cluster offset?">;
+    uint32 unknown_4;
+    ubyte unknown_empty_5[16];
+    // common alike?
+    AXK_OBJECT_TYPE object_type;
+    ubyte unknown_6;
+    byte name[16]; // or assigned sample name? from sample bank member?
+    uint16 unknown_6;
+    uint32 size; // really?
+    // ???
+    uint16 unknown_7;
+    uint16 unknown_8 <comment="possibly two bytes?">;
+    byte unknown_empty_9[8];
+    byte assigned_volume[16];
+    ubyte unknown_9;
+    byte unknown_empty_10[7];
+    byte sample_type[4] <comment="usually SMPX?">;
+    byte unknown_empty_11[8];
+    // sample bulk data alike?
+    byte linked_wave_object_name_left[16];
+    byte linked_wave_object_name_right[16];
+    uint16 unknown_13;
+    uint16 unknown_14;
+    byte unknown_empty_15[4];
+    uint16 unknown_16;
+    uint16 unknown_17;
+    byte unknown_empty_18[4];
+    // sample parameter (alike)?
     AXK_SAMPLE_PARAMETER sample_parameter;
 };
 
@@ -318,10 +352,11 @@ for (i=0; i < 8; i++) {
                 continue;
             } 
 */
-/*else { // generic parsing to unknown data structure
-                local DYNAMIC_UNKNOWN node_data(directory_index.node[j].data_size);
-                ReadBytes(node_data.unknown, data_sector*512, directory_index.node[j].data_size);
-            }*/
+/*
+            // generic parsing to unknown data structure
+           local DYNAMIC_UNKNOWN node_data(directory_index.node[j].data_size);
+           ReadBytes(node_data.unknown, data_sector*512, directory_index.node[j].data_size);
+*/
         }
     }    
 
