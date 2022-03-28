@@ -114,10 +114,20 @@ typedef struct NODE(uint32 partition_sector_start) { // 72 bytes
     uint16 unknown_9;
 };
 
-typedef struct DIRECTORY_INDEX(uint32 partition_sector_start) { // currently hardcoded to 1024 bytes. Must be dynamic.
-    NODE node(partition_sector_start)[11] <optimize=false>; // the first three nodes seem to be predefined
-    byte sector_filler[232];
+struct FILE_INDEX(uint32 partition_sector_start) {
+    local uint32 i <hidden=true> = 0;
+    local int currentPos <hidden=true>;
+    local uint32 next <hidden=true> = 1;
+    while ((i < 4) || (next != 0)) {
+        currentPos = FTell();
+        // we read ahead the next uint32 to determine whether another file is coming as the uint32 block after the last "inode" is zero.
+        next = ReadUInt();
+        FSeek(currentPos);
+        NODE node(partition_sector_start);
+        i++;
+    }
 };
+
 
 typedef struct UNKNOWN_CHUNK_2 {
     byte unknown[1024]; // very likely wrong: a4k-test-04.hds is longer, dependant on number of volumes or dynamic?
@@ -134,7 +144,7 @@ enum <byte> AXK_OBJECT_TYPE {
     OT_PROGRAM = 20
 };
 
-typedef struct AXK_SAMPLE_PARAMETER { // 224 bytes (a bit less currently)
+typedef struct AXK_SAMPLE_PARAMETER { // 224 bytes (a bit less currently), incomplete
     ubyte reserved_1[24];
     uint32 bitmap_link_to_program_a;
     uint32 bitmap_link_to_program_b;
@@ -184,19 +194,12 @@ typedef struct AXK_SAMPLE_PARAMETER { // 224 bytes (a bit less currently)
      
 };
 
-typedef struct SFS_DATA_BLOCK_METADATA {
-    byte header[16];
-    uint32 unknown_1;
-    uint32 unknown_2 <comment="some cluster offset">;
-    uint32 unknown_3 <comment="some cluster offset">;
-};
-
-typedef struct AXK_SAMPLEBANK_MEMBER {
+typedef struct AXK_SAMPLEBANK_MEMBER { // not sure yet whether this sysex block can be used for the filesystem stuff
     byte assigned_sample_name[16];
     uint32 reserved;
 };
 
-typedef struct AXK_COMMON { // 64 byte
+typedef struct AXK_COMMON { // 64 byte, not sure yet whether this sysex block can be used for the filesystem stuff
     AXK_OBJECT_TYPE object_type;
     ubyte reserved_1;
     byte name[16];
@@ -217,7 +220,10 @@ typedef struct AXK_COMMON { // 64 byte
 };
 
 typedef struct AXK_SAMPLE { // FSFSDEV3SPLXSMPL, work in progress. Does not match the sysex block for some reason
-    SFS_DATA_BLOCK_METADATA metadata;
+    byte header[16];
+    uint32 unknown_1;
+    uint32 unknown_2 <comment="some cluster offset">;
+    uint32 unknown_3 <comment="some cluster offset">;
 //    AXK_COMMON common; // doesn't work!
 
     uint32 size_left;
@@ -305,16 +311,6 @@ for (i=0; i < 8; i++) {
     PARTITION partition_backup(sfs_superblock.partition_info[i].start_sector) <hidden=true>;
     sectorCount+=2;
 
-// calculated cluster bitmap size
-//    bitmap_size = partition.number_of_clusters;
-//    bitmap_size = Abs((bitmap_size / 8.0)+0.5);
-//    bitmap_size = Ceil(bitmap_size/1024.0);
-//    CLUSTER_BITMAP used_clusters(bitmap_size*1024);
-//    sectorCount+=bitmap_size*2;
-//    CLUSTER_BITMAP used_clusters_backup(bitmap_size*1024);
-//    sectorCount+=bitmap_size*2;
-
-
 // direct cluster bitmap size
     bitmap_size = partition.cluster_offset_to_directory_index - partition.cluster_offset_to_cluster_bitmap;
 
@@ -323,43 +319,37 @@ for (i=0; i < 8; i++) {
     CLUSTER_BITMAP used_clusters_backup(bitmap_size*1024) <hidden=true>;
     sectorCount+=bitmap_size*2;
 
-    DIRECTORY_INDEX directory_index(sfs_superblock.partition_info[i].start_sector);
-    sectorCount+=2;
+// file/directory index
+    FILE_INDEX file_index(sfs_superblock.partition_info[i].start_sector);
+    sectorCount+=2; // we currently assume the file index is two sectors. This likely needs to be dynamic somehow.
 
-    // try to parse the data blocks
+// try to parse the data blocks
     local int currentPos <hidden=true> = FTell();
 
     local int j <hidden=true>;
     local uint32 data_sector <hidden=true>;
-    for (j=0; j < 11; j++) {
-        if (directory_index.node[j].data_size > 0) {
-            data_sector = directory_index.node[j].absolute_sector;
+    for (j=0; j < 12; j++) {
+        if (file_index.node[j].data_size > 0) {
+            data_sector = file_index.node[j].absolute_sector;
             
             FSeek(data_sector*512);
             
-            if (directory_index.node[j].node_type == NT_SBNK) {
+            if (file_index.node[j].node_type == NT_SBNK) {
                 AXK_SAMPLEBANK samplebank;
                 continue;
             } 
-            if ((directory_index.node[j].node_type == NT_SMPL))  {
+            if ((file_index.node[j].node_type == NT_SMPL))  {
                 AXK_SAMPLE sample;
                 continue;
             }
 
-/*
-            if (directory_index.node[j].node_type == NT_SMPL) {
-                AXK_WAVE_DATA wavedata;
-                continue;
-            } 
-*/
-/*
-            // generic parsing to unknown data structure
-           local DYNAMIC_UNKNOWN node_data(directory_index.node[j].data_size);
-           ReadBytes(node_data.unknown, data_sector*512, directory_index.node[j].data_size);
-*/
+// generic parsing to unknown data structure
+//           local DYNAMIC_UNKNOWN node_data(directory_index.node[j].data_size);
+//           ReadBytes(node_data.unknown, data_sector*512, directory_index.node[j].data_size);
+
         }
     }    
-
     FSeek(currentPos);
+
 }
 
