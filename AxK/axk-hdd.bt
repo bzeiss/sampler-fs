@@ -41,6 +41,16 @@ typedef struct DISC_METADATA_SECTOR { // 512 byte block, not sure yet what this 
 };
 
 typedef struct PARTITION(uint32 partition_sector_start) { // 1024 byte block
+// some possible findings on the lower part:
+// variable part starts at byte 261 of partition sector
+// the variable part is always 252 bytes long
+// the variable part may start with 00 00 00 03 or 00 00 00 01, the patterns within this block look different depending on this prefix
+
+// 00 00 13 88 introduces three blocks (not true for A3K_Disk_partitionied.img though):
+// 1) 52 bytes long, always followed by 00 00 02 00 | 00 00 00 02 | 00 00 08 00 | 00 00 00 03 | dynamic
+// 2) 68 bytes long, dynamic follow up
+// 3) 116 bytes long, always followed by 00 00 04 00 | 00 00 00 00 | dynamic
+
     char yamaha_dev3_tag[11];
     byte unknown_empty_1[53];
     char partition_name[16];
@@ -52,22 +62,99 @@ typedef struct PARTITION(uint32 partition_sector_start) { // 1024 byte block
     uint32 unknown_content_3 <comment="static">; // number of sectors per cluster?
     uint32 unknown_content_4 <comment="static">; // number of clusters for partition clusters?
     uint32 cluster_offset_to_cluster_bitmap;
-    local uint32 absolute_sector_cluster_bitmap = partition_sector_start + cluster_offset_to_cluster_bitmap*2;
+    local uint64 absolute_sector_cluster_bitmap = partition_sector_start + cluster_offset_to_cluster_bitmap*2;
     uint32 unknown_content_6 <comment="static">; // ???? too big for either clusters or sectors. maybe some magic value. static.
     uint32 cluster_offset_to_directory_index;
-    local uint32 absolute_sector_directory_index = partition_sector_start + cluster_offset_to_directory_index*2;
+    local uint64 absolute_sector_directory_index = partition_sector_start + cluster_offset_to_directory_index*2;
     uint32 unknown_content_8 <comment="static">; // some kind of cluster offset? static
-    byte unknown_content_9[88];
-    uint32 unknown_content_10a;
-    uint32 unknown_content_10b <comment="partition start sector sometimes?">; // the following bytes seem to be shifted sometimes. Hence, this stuff doesn't always match the hypotheses in the comments.
-    uint32 unknown_content_11 <comment="sector size?">;
-    uint32 unknown_content_12;
-    uint32 unknown_content_13 <comment="some kind of absolute sector, a few bytes before sector start">;
-    uint32 unknown_content_14;
-    uint32 unknown_content_15 <comment="sectors in partition?">;
-    uint32 unknown_content_16 <comment="cluster size?">;
-    uint32 unknown_content_17;
-    byte unknown_content_18[216];
+    byte unknown_empty_9[88];
+    uint32 unknown_content_10a <comment="static">;
+    uint32 unknown_content_10b <comment="static">;
+    uint32 unknown_content_11 <comment="static">;
+    uint32 unknown_content_12 <comment="static">;
+    uint32 unknown_content_13 <comment="static">;
+    uint32 unknown_content_14 <comment="static">;
+    uint32 unknown_content_15 <comment="dynamic, sectors in partition?">;
+    uint32 unknown_content_16 <comment="static, cluster size?">;
+    uint16 unknown_content_17 <comment="static">;
+    uint16 unknown_content_18 <comment="static">;
+    uint16 unknown_content_19 <comment="static">;
+    uint16 unknown_content_20 <comment="static">;
+    uint16 unknown_content_21 <comment="static">;
+    uint16 unknown_content_22 <comment="dynamic">;
+    uint16 unknown_content_23 <comment="static">;
+    uint16 unknown_content_24 <comment="dynamic">;
+    uint16 unknown_content_25 <comment="dynamic, -> possibly dynamic content from here?">;
+    uint16 unknown_content_26 <comment="dynamic">;
+    uint32 unknown_content_27 <comment="static">;
+    uint32 unknown_content_28 <comment="static">;
+    uint32 unknown_content_29 <comment="static">;
+    uint16 unknown_content_30 <comment="dynamic">;
+    uint16 unknown_content_31 <comment="dynamic">;
+    uint32 unknown_content_32 <comment="dynamic">; // size of disk in kbytes?
+    uint32 unknown_content_33 <comment="dynamic">;
+    uint16 unknown_content_34 <comment="dynamic">;
+    uint16 unknown_content_35 <comment="dynamic">;
+    uint32 unknown_content_36 <comment="dynamic">;
+    uint16 unknown_content_37 <comment="dynamic">;
+    uint16 unknown_content_38 <comment="dynamic">;
+    uint32 unknown_content_39 <comment="dynamic">;
+    uint32 unknown_content_40 <comment="dynamic">;
+    uint16 unknown_content_41 <comment="static">;
+    uint16 unknown_content_42 <comment="dynamic">;
+    uint32 unknown_content_43 <comment="dynamic">;
+    uint32 unknown_content_44 <comment="static">;
+    uint16 unknown_content_45 <comment="static">;
+    uint16 unknown_content_46 <comment="dynamic">;
+    uint16 unknown_content_47 <comment="static">;
+    uint16 unknown_content_48 <comment="dynamic">;
+    uint32 unknown_content_49 <comment="static">;
+    uint32 unknown_content_50 <comment="dynamic, sector size or so">;
+    uint16 unknown_content_51 <comment="static">;
+    uint16 unknown_content_52 <comment="dynamic">;
+    uint16 unknown_content_53 <comment="dynamic">;
+    uint16 unknown_content_54 <comment="dynamic">;
+
+    uint32 unknown_content_55 <comment="static">;
+    uint32 unknown_content_56 <comment="static">;
+    uint32 unknown_content_57 <comment="static">;
+    uint16 unknown_content_58 <comment="dynamic">;
+    byte partition_string[16];
+    uint16 unknown_content_62;
+    uint32 unknown_content_63;
+    uint32 unknown_content_64;
+    uint32 unknown_content_65;   
+    uint16 unknown_content_66;
+    uint16 unknown_content_67;
+    uint16 unknown_content_68;
+    uint16 unknown_content_69;
+    uint16 unknown_content_70;
+    uint16 unknown_content_71;
+    uint16 unknown_content_72;
+    uint16 unknown_content_73;
+    uint16 unknown_content_74;
+    uint16 unknown_content_75;
+    uint16 unknown_content_76;
+    uint16 unknown_content_77;
+    uint16 unknown_content_78;
+    uint16 unknown_content_79;
+    uint16 unknown_content_80;
+    uint16 unknown_content_81;
+    uint16 unknown_content_82;
+    uint16 unknown_content_83;
+    uint16 unknown_content_84;
+    uint16 unknown_content_85;
+    uint32 unknown_content_86;
+    uint32 unknown_content_87;
+    uint32 unknown_content_88;
+    uint32 unknown_content_89;
+    uint32 unknown_content_90;
+    uint32 unknown_content_91;
+    uint32 unknown_content_92;
+    uint32 unknown_content_93;
+    uint32 unknown_content_94;
+
+    //byte unknown_content_18[216];
     byte unknown_empty_5[512];
 };
 
@@ -101,9 +188,9 @@ typedef struct NODE(uint32 partition_sector_start) { // 72 bytes
     uint32 cluster_offset;
     local uint32 sector_offset <hidden=true> = cluster_offset*2;
     if (cluster_offset > 0)
-        local uint32 absolute_sector = sector_offset + partition_sector_start;
+        local uint64 absolute_sector = sector_offset + partition_sector_start;
     else
-        local uint32 absolute_sector = 0;
+        local uint64 absolute_sector = 0;
     uint32 unknown_2 <comment="usually 2. For the first node node_type=128, it is 1.">;
     uint32 data_size <comment="bytes, 2048 indicator for large dataset? (SMPL)">;
     byte unknown_4[36];
@@ -115,16 +202,22 @@ typedef struct NODE(uint32 partition_sector_start) { // 72 bytes
 };
 
 struct FILE_INDEX(uint32 partition_sector_start) {
-    local uint32 i <hidden=true> = 0;
-    local int currentPos <hidden=true>;
-    local uint32 next <hidden=true> = 1;
-    while ((i < 4) || (next != 0)) {
+    local uint64 currentPos = FTell();
+    local uint64 sector_diff = 0;
+    local uint64 next = 1;
+    local uint32 size = 0;
+    while ((size < 4) || (next != 0)) {
         currentPos = FTell();
         // we read ahead the next uint32 to determine whether another file is coming as the uint32 block after the last "inode" is zero.
         next = ReadUInt();
         FSeek(currentPos);
         NODE node(partition_sector_start);
-        i++;
+        size++;
+        // jump one sector ahead if a node doesn't fit the sector any more
+        sector_diff = FTell() % 512;
+        if (sector_diff < 72)
+            FSeek(FTell()+(512-(FTell()%512)));        
+        
     }
 };
 
@@ -294,45 +387,68 @@ sectorCount++;
 local int i <hidden=true>;
 local uint32 start_sector <hidden=true>;
 local uint32 bytes_to_skip <hidden=true>;
-local uint32 bitmap_size <hidden=true>;
-bitmap_size = 0;
+local uint32 bitmap_size_clusters <hidden=true>;
+local uint64 file_index_start_pos <hidden=true>;
+local uint64 current_pos <hidden=true>;
+local uint64 seek_diff <hidden=true>;
+local uint64 seek_position <hidden=true>;
+
+local int j = 0;
+local uint32 data_sector <hidden=true>;
+
+bitmap_size_clusters = 0;
 for (i=0; i < 8; i++) {
     if (sfs_superblock.partition_info[i].number_of_sectors <= 0)
         continue;
+    // seek to the next partition superblock start position
+    seek_position = sfs_superblock.partition_info[i].start_sector;
+    seek_position *= 512;
+    FSeek(seek_position);
+    sectorCount = sfs_superblock.partition_info[i].start_sector;
+
+/*
     start_sector = sfs_superblock.partition_info[i].start_sector;
     bytes_to_skip = start_sector*512-(sectorCount*512);
     if (bytes_to_skip > 0) {
         DYNAMIC_UNKNOWN unknown_chunk(bytes_to_skip) <hidden=true>;
         sectorCount+=start_sector-sectorCount;
     }
+*/
     SetBackColor( cLtPurple );
-    PARTITION partition(sfs_superblock.partition_info[i].start_sector);
+    PARTITION partition(sfs_superblock.partition_info[i].start_sector) <optimize=false>;
     sectorCount+=2;
     PARTITION partition_backup(sfs_superblock.partition_info[i].start_sector) <hidden=true>;
     sectorCount+=2;
 
 // direct cluster bitmap size
-    bitmap_size = partition.cluster_offset_to_directory_index - partition.cluster_offset_to_cluster_bitmap;
 
-    CLUSTER_BITMAP used_clusters(bitmap_size*2*512);
-    sectorCount+=bitmap_size*2;
-    CLUSTER_BITMAP used_clusters_backup(bitmap_size*1024) <hidden=true>;
-    sectorCount+=bitmap_size*2;
+    bitmap_size_clusters = partition.cluster_offset_to_directory_index - partition.cluster_offset_to_cluster_bitmap;
+
+    CLUSTER_BITMAP used_clusters(bitmap_size_clusters*2*512);
+    sectorCount+=bitmap_size_clusters*2;
+    CLUSTER_BITMAP used_clusters_backup(bitmap_size_clusters*2*512) <hidden=true>;
+    sectorCount+=bitmap_size_clusters*2;
 
 // file/directory index
+
+    file_index_start_pos = FTell();
     FILE_INDEX file_index(sfs_superblock.partition_info[i].start_sector);
-    sectorCount+=2; // we currently assume the file index is two sectors. This likely needs to be dynamic somehow.
+    current_pos = FTell();
+    seek_diff = (current_pos-1 - file_index_start_pos)%512;
+    DYNAMIC_UNKNOWN sector_fillup(512-seek_diff-1) <hidden=true>;
+    current_pos = FTell();
+    sectorCount+=(current_pos-file_index_start_pos)/512; // probably not the current end
 
 // try to parse the data blocks
-    local int currentPos <hidden=true> = FTell();
 
-    local int j <hidden=true>;
-    local uint32 data_sector <hidden=true>;
-    for (j=0; j < 12; j++) {
+    current_pos = FTell();
+
+    for (j=0; j < file_index.size; j++) {
         if (file_index.node[j].data_size > 0) {
             data_sector = file_index.node[j].absolute_sector;
-            
-            FSeek(data_sector*512);
+            seek_position = data_sector;
+            seek_position *= 512;
+            FSeek(seek_position);
             
             if (file_index.node[j].node_type == NT_SBNK) {
                 AXK_SAMPLEBANK samplebank;
@@ -349,7 +465,7 @@ for (i=0; i < 8; i++) {
 
         }
     }    
-    FSeek(currentPos);
+    FSeek(current_pos);
 
 }
 
