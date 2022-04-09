@@ -32,10 +32,8 @@ typedef struct SFS_SUPERBLOCK { // 512 byte block
 };
 
 typedef struct DISC_METADATA_SECTOR { // 512 byte block, not sure yet what this sector is doing exactly...
-    byte content_1[8]; // possibly 9 bytes, looks important. like disk size, partition size, checksum, etc...
-    byte unknown_empty_3[1];
-    byte header[5]; // disk number? partition count?
-    byte content_2[12];
+    ubyte checksum[16];
+    ubyte unknown[10];
     byte name[16];
     byte unknown_empty_4[470];
 };
@@ -51,6 +49,7 @@ typedef struct PARTITION(uint32 partition_sector_start) { // 1024 byte block
 // 2) 68 bytes long, dynamic follow up
 // 3) 116 bytes long, always followed by 00 00 04 00 | 00 00 00 00 | dynamic
 
+    local uint32 __partition_sector_start = partition_sector_start;
     char yamaha_dev3_tag[11];
     byte unknown_empty_1[53];
     char partition_name[16];
@@ -62,10 +61,10 @@ typedef struct PARTITION(uint32 partition_sector_start) { // 1024 byte block
     uint32 unknown_content_3 <comment="static">; // number of sectors per cluster?
     uint32 unknown_content_4 <comment="static">; // number of clusters for partition clusters?
     uint32 cluster_offset_to_cluster_bitmap;
-    local uint64 absolute_sector_cluster_bitmap = partition_sector_start + cluster_offset_to_cluster_bitmap*2;
+    local uint64 __absolute_sector_cluster_bitmap = partition_sector_start + cluster_offset_to_cluster_bitmap*2;
     uint32 unknown_content_6 <comment="static">; // ???? too big for either clusters or sectors. maybe some magic value. static.
     uint32 cluster_offset_to_directory_index;
-    local uint64 absolute_sector_directory_index = partition_sector_start + cluster_offset_to_directory_index*2;
+    local uint64 __absolute_sector_directory_index = partition_sector_start + cluster_offset_to_directory_index*2;
     uint32 unknown_content_8 <comment="static">; // some kind of cluster offset? static
     byte unknown_empty_9[88];
     uint32 unknown_content_10a <comment="static">;
@@ -85,6 +84,7 @@ typedef struct PARTITION(uint32 partition_sector_start) { // 1024 byte block
     uint16 unknown_content_23 <comment="static">;
     uint16 unknown_content_24 <comment="dynamic">;
     uint16 unknown_content_25 <comment="dynamic, -> possibly dynamic content from here?">;
+    local uint64 __unknown_content_25_test = partition_sector_start + unknown_content_25*2;
     uint16 unknown_content_26 <comment="dynamic">;
     uint32 unknown_content_27 <comment="static">;
     uint32 unknown_content_28 <comment="static">;
@@ -168,32 +168,46 @@ typedef struct CLUSTER_BITMAP(uint32 bitmap_size) {
     byte used_clusters_bitmap[bitmap_size];
 };
 
-enum <uint16> NODE_TYPE {
-    NT_INITIAL = 128, // not really INITAL, depending on the image, 128 may appear multiple times in the dir index
-    NT_VOLUMES_INDEX = 160,
-    NT_EMPTY = 0,
-    NT_SMP = 96,
-    NT_UNKNOWN_REPEATING_NODE_1 = 64,
-    NT_UNKNOWN_SMPL_SBNK_SBAC_SEQU_PROG_NODE = 224,
-    NT_SMPL = 23176,
-    NT_SBNK = 392
+/*
+// this is all wrong....
+enum <ubyte> NODE_TYPE {
+    NT_INTERNAL = 0,
+    NT_FILE_INDEX = 0x04,
+    NT_SMP = 0x50, // FSFSDEV3SPLXSMPL // decimal: 80
+    NT_SMPL = 0x03,
+    NT_SBNK = 0x01 // FSFSDEV3SPLXSBNK
 };
-
+*/
 
 typedef struct NODE(uint32 partition_sector_start) { // 72 bytes
-    uint16 unknown_1 <comment="usually 1 except for SMPL. SMPL=2. Indicator for oversized data?">;
-    uint32 unknown_2a <comment="usually 2 except for SMPL. SMPL=87. Indicator for oversized data?">;
+//    uint32 unknown_1 <comment="usually 1 except for SMPL. SMPL=2. Indicator for oversized data?">;
+//    uint32 unknown_2 <comment="usually 1 except for SMPL. SMPL=2. Indicator for oversized data?">;
+
+ // alternative version?
+    local uint32 __partition_sector_start = partition_sector_start;
+    uint16 unknown_1a <comment="usually 1 except for SMPL. SMPL=2. Indicator for oversized data?">;
+    uint16 unknown_1b;
+    uint16 unknown_2a <comment="usually 2 except for SMPL. SMPL=87. Indicator for oversized data?">;
     uint16 unknown_2b;
-    NODE_TYPE node_type;
+
+    uint16 node_size;
     uint32 cluster_offset;
-    local uint32 sector_offset <hidden=true> = cluster_offset*2;
+    local uint32 __sector_offset <hidden=true> = cluster_offset*2;
     if (cluster_offset > 0)
-        local uint64 absolute_sector = sector_offset + partition_sector_start;
+        local uint64 __absolute_sector = __sector_offset + partition_sector_start;
     else
-        local uint64 absolute_sector = 0;
+        local uint64 __absolute_sector = 0;
+    local uint64 __address_node_end = (__sector_offset + partition_sector_start)*512 + node_size;
     uint32 unknown_2 <comment="usually 2. For the first node node_type=128, it is 1.">;
     uint32 data_size <comment="bytes, 2048 indicator for large dataset? (SMPL)">;
-    byte unknown_4[36];
+    uint32 cluster_offset_sampledata_maybe;
+    //local uint64 __absolute_sector_sampledata_maybe = cluster_offset_sampledata*2;
+    uint32 unknown_3b;
+    byte unknown_3c[2];
+    uint16 unknown_3d_this; // number of clusters or so
+    byte unknown_3e;
+    //local uint64 __unknown_3c_test = 
+    byte unknown_empty_4[23];
     byte unknown_5[9]; // metadata?
     byte unknown_6;
     byte unknown_7;
@@ -214,9 +228,11 @@ struct FILE_INDEX(uint32 partition_sector_start) {
         NODE node(partition_sector_start);
         size++;
         // jump one sector ahead if a node doesn't fit the sector any more
+/* // doesn't work (or at least always work)
         sector_diff = FTell() % 512;
         if (sector_diff < 72)
             FSeek(FTell()+(512-(FTell()%512)));        
+*/
         
     }
 };
@@ -365,6 +381,27 @@ typedef struct AXK_SAMPLEBANK { // FSFSDEV3SPLXSBNK, roughly works, incomplete a
     AXK_SAMPLE_PARAMETER sample_parameter;
 };
 
+typedef struct AXK_INTERNAL_SAMPLE {
+//377344: 00 20 00 02 00 00 00 04 2E 00 4F 58 00 00 00 00  . ........OX.... 
+//377360: 00 17 82 1A 00 00 00 00 FF FF FF FF 00 00 00 00  ..‚.....ÿÿÿÿ.... 
+//377376: 00 20 00 03 00 00 00 03 2E 2E 00 04 00 00 00 00  . .............. 
+//377392: 00 17 83 C8 00 00 00 00 00 00 00 00 00 00 00 00  ..ƒÈ............ 
+//377408: 00 20 00 11 00 00 00 09                          . ......
+    ubyte unknown_metadata[72];
+    char internal_sample_name[16];
+};
+
+typedef struct AXK_SAMPLEDATA {
+//379392: 00 20 00 02 00 00 00 05 2E 00 4F 58 00 00 00 00  . ........OX.... 
+//379408: 00 17 82 1A 00 00 00 00 FF FF FF FF 00 00 00 00  ..‚.....ÿÿÿÿ.... 
+//379424: 00 20 00 03 00 00 00 03 2E 2E 00 05 00 00 00 00  . .............. 
+//379440: 00 17 83 C8 00 00 00 00 00 00 00 00 00 00 00 00  ..ƒÈ............ 
+//379456: 00 20 00 11 00 00 00 0A                          . ......
+    ubyte unknown_metadata[72];
+    char sample_name[16];
+//    byte sample_data[];
+};
+
 // -----------------------------------------------------------------------------------------------------
 
 BigEndian();
@@ -393,11 +430,11 @@ local uint64 current_pos <hidden=true>;
 local uint64 seek_diff <hidden=true>;
 local uint64 seek_position <hidden=true>;
 
-local int j = 0;
+local int j <hidden=true> = 0;
 local uint32 data_sector <hidden=true>;
 
 bitmap_size_clusters = 0;
-for (i=0; i < 8; i++) {
+for (i=0; i < 8; i++) { // loop over all 8 possible partitions
     if (sfs_superblock.partition_info[i].number_of_sectors <= 0)
         continue;
     // seek to the next partition superblock start position
@@ -439,8 +476,9 @@ for (i=0; i < 8; i++) {
     current_pos = FTell();
     sectorCount+=(current_pos-file_index_start_pos)/512; // probably not the current end
 
-// try to parse the data blocks
 
+// try to parse the data blocks
+/*
     current_pos = FTell();
 
     for (j=0; j < file_index.size; j++) {
@@ -454,7 +492,7 @@ for (i=0; i < 8; i++) {
                 AXK_SAMPLEBANK samplebank;
                 continue;
             } 
-            if ((file_index.node[j].node_type == NT_SMPL))  {
+            if ((file_index.node[j].node_type == NT_SMP))  {
                 AXK_SAMPLE sample;
                 continue;
             }
@@ -466,6 +504,7 @@ for (i=0; i < 8; i++) {
         }
     }    
     FSeek(current_pos);
+*/
 
 }
 
